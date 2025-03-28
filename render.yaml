@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: client-management-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+    healthCheckPath: /api/clients
+    autoDeploy: true 

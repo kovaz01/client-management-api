@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { getCollection, COLLECTIONS } from '@/lib/db';
-import { Client, ClientValidationSchema, IClient } from '@/models/Client';
+import { ClientValidationSchema, IClient } from '@/models/Client';
 
 /**
  * Get the active client for a specific group
