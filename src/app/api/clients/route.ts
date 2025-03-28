@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import { getClient, listClients, deleteClient, createClient } from '@/services/clientService';
 
+// Helper function to add CORS headers
+function corsResponse(data: any, status: number = 200) {
+  const response = NextResponse.json(data, { status });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return response;
+}
+
+export async function OPTIONS() {
+  return corsResponse({}, 200);
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,12 +23,12 @@ export async function GET(request: Request) {
       // Get single client
       const client = await getClient(id);
       if (!client) {
-        return NextResponse.json(
+        return corsResponse(
           { error: 'Client not found' },
-          { status: 404 }
+          404
         );
       }
-      return NextResponse.json(client);
+      return corsResponse(client);
     }
 
     // List all clients
@@ -31,11 +44,11 @@ export async function GET(request: Request) {
       sortOrder: sortOrder as 'asc' | 'desc'
     });
 
-    return NextResponse.json(result);
+    return corsResponse(result);
   } catch (error) {
-    return NextResponse.json(
+    return corsResponse(
       { error: 'Failed to fetch clients' },
-      { status: 500 }
+      500
     );
   }
 }
@@ -46,25 +59,25 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'Client ID is required' },
-        { status: 400 }
+        400
       );
     }
 
     const deleted = await deleteClient(id);
     if (!deleted) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'Client not found' },
-        { status: 404 }
+        404
       );
     }
 
-    return NextResponse.json({ message: 'Client deleted successfully' });
+    return corsResponse({ message: 'Client deleted successfully' });
   } catch (error) {
-    return NextResponse.json(
+    return corsResponse(
       { error: 'Failed to delete client' },
-      { status: 500 }
+      500
     );
   }
 }
@@ -73,17 +86,17 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const client = await createClient(body);
-    return NextResponse.json(client, { status: 201 });
+    return corsResponse(client, 201);
   } catch (error) {
     if (error instanceof Error) {
-      return NextResponse.json(
+      return corsResponse(
         { error: error.message },
-        { status: 400 }
+        400
       );
     }
-    return NextResponse.json(
+    return corsResponse(
       { error: 'Failed to create client' },
-      { status: 500 }
+      500
     );
   }
 } 
