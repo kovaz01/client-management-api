@@ -177,4 +177,90 @@ export async function listClients(options: {
     console.error('Error listing clients from MongoDB:', error);
     throw error;
   }
-} 
+}
+
+/**
+ * Fetch client data from external API based on phone number
+ * @param {string} phoneNumber - The phone number to search for
+ * @returns {Promise<Partial<IClient>>} - The client data from external API
+ */
+export async function fetchClientDataFromExternalAPI(phoneNumber: string) {
+  try {
+    // Step 1: Login with phone number
+    const loginResponse = await fetch("https://api.apoint.co.il/BuildApp/Login/EzhGlobalTenantLogin", {
+      method: "POST",
+      headers: {
+        "accept": "*/*",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify([
+        {
+          paramName: "mobile",
+          paramValue: phoneNumber,
+          paramType: 22
+        }
+      ])
+    });
+
+    if (!loginResponse.ok) {
+      throw new Error(`Failed to login with phone number. Status: ${loginResponse.status}`);
+    }
+
+    const loginData = await loginResponse.json();
+    console.log("Login response:", loginData);
+
+    const loginParsed = loginData.APIResponseText
+      ? JSON.parse(loginData.APIResponseText)
+      : null;
+
+    if (!loginParsed || !loginParsed.Table || loginParsed.Table.length === 0) {
+      throw new Error("No login data found in login response");
+    }
+
+    const loginInfo = loginParsed.Table[0];
+
+    // Step 2: Authenticate using returned credentials
+    const authResponse = await fetch("https://api.apoint.co.il/dbActions/Login/Auth", {
+      method: "POST",
+      headers: {
+        accept: "*/*",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify([
+        { paramName: "CompID", paramValue: loginInfo.compGuid, paramType: 16 },
+        { paramName: "UserName", paramValue: loginInfo.compGuid, paramType: 8 },
+        { paramName: "UserPswd", paramValue: loginInfo.webPswd, paramType: 8 },
+        { paramName: "AppGuid", paramValue: "77C8F2FD-B1DE-4CEA-BE74-FD943B3BD54D", paramType: 8 }
+      ])
+    });
+
+    if (!authResponse.ok) {
+      throw new Error(`Failed to authenticate. Status: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+    console.log("Authentication response:", authData);
+
+    const sessionToken = authData.APIResponseText
+      ? JSON.parse(authData.APIResponseText).sessionToken
+      : null;
+
+    if (!sessionToken) {
+      throw new Error("No session token received");
+    }
+
+
+    return {
+      bid: parseInt(loginInfo.bid) || 0,
+      uid: parseInt(loginInfo.uid) || 0,
+      mtcGroupID: 21,
+      compId: loginInfo.compGuid || '',
+      userName: loginInfo.compGuid || '',
+      password: loginInfo.webPswd || '',
+      appGuid: "77C8F2FD-B1DE-4CEA-BE74-FD943B3BD54D"
+    };
+  } catch (error) {
+    console.error("❌ Error fetching client data from external API:", error);
+    throw error;
+  }
+}
